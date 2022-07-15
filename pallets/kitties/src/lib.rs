@@ -20,7 +20,9 @@ use sp_std::vec::Vec;
 use scale_info::TypeInfo;
 pub type Id = u32;
 use sp_runtime::ArithmeticError;
+use frame_support::traits::Currency;
 
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 #[frame_support::pallet]
 pub mod pallet {
 
@@ -29,7 +31,7 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub struct Kitty<T: Config> {
 		pub dna: Vec<u8>,
-		pub price: u64,
+		pub price: BalanceOf<T>,
 		pub gender: Gender,
 		pub owner: T::AccountId,
 	}
@@ -44,6 +46,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type Currency: Currency<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -99,9 +102,9 @@ pub mod pallet {
 		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
 			// Make sure the caller is from a signed origin
 			let owner = ensure_signed(origin)?;
-
+			log::info!("total balance:{:?}", T::Currency::total_balance(&owner));
 			let gender = Self::gen_gender(&dna)?;
-			let kitty = Kitty::<T> { dna: dna.clone(), price: 0, gender, owner: owner.clone() };
+			let kitty = Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: owner.clone() };
 
 			// Check if the kitty does not already exist in our storage map
 			ensure!(!Kitties::<T>::contains_key(&kitty.dna), Error::<T>::DuplicateKitty);
@@ -171,3 +174,9 @@ impl<T> Pallet<T> {
 		Ok(res)
 	}
 }
+
+// tóm tắt laik
+// loosely coupling
+//tightly coupling
+// ưu nhược điểm
+// implement cho runtime

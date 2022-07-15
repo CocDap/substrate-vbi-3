@@ -52,6 +52,11 @@ hex-literal = { version = "0.3.4", optional = true }
 pallet-template = { version = "4.0.0-dev", default-features = false, path = "../pallets/template" }
 pallet-demo = { version = "4.0.0-dev", default-features = false, path = "../pallets/demo" }
 pallet-kitties = { version = "4.0.0-dev", default-features = false, path = "../pallets/kitties" }
+
+#Pallet coupling
+pallet-tightly-coupling = { version = "4.0.0-dev", default-features = false, path = "../pallets/tightly-coupling" }
+pallet-loosely-coupling = { version = "4.0.0-dev", default-features = false, path = "../pallets/loosely-coupling" }
+
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
@@ -86,6 +91,8 @@ std = [
 	"sp-version/std",
 	"pallet-demo/std",
 	"pallet-kitties/std",
+	"pallet-tightly-coupling/std",
+	"pallet-loosely-coupling/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
