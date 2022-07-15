@@ -59,7 +59,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_kitty)]
-	pub(super) type Kitties<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
+	pub type Kitties<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn kitty_owned)]

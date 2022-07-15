@@ -30,6 +30,17 @@ pub mod pallet {
 		gender: Gender,
 		account: T::AccountId,
 	}
+	impl<T:Config> fmt::Debug for Students<T> {
+		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+			f.debug_struct("Students")
+			 .field("name", &self.name)
+			 .field("age", &self.age)
+			 .field("gender", &self.gender)
+			 .field("account", &self.account)
+			 .finish()
+		}
+	}
+
 	pub type Id = u32;
 
 	#[derive(TypeInfo, Encode ,Decode, Debug)]
@@ -37,6 +48,8 @@ pub mod pallet {
 		Male,
 		Female,
 	}
+
+
 
 	impl Default for Gender{
 		fn default()-> Self{
@@ -78,6 +91,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		StudentStored(Vec<u8>,u8),
+		StudentHave,
 	}
 
 	// Errors inform users that something went wrong.
@@ -87,6 +101,7 @@ pub mod pallet {
 		TooYoung,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		NoStudent,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -112,20 +127,60 @@ pub mod pallet {
 				gender: gender,
 				account: who,
 			};
+			log::info!("Result:{:?}", student);
 			// let current_id = Self::student_id();
 			// let current_id = StudentId::<T>::get();
 			let mut current_id = <StudentId<T>>::get();
 
 			// Student::<T>::insert(current_id, student);
 			<Student<T>>::insert(current_id, student);
-			current_id +=1;
-			StudentId::<T>::put(current_id);
+			// current_id +=1;
+			// StudentId::<T>::put(current_id);
+			StudentId::<T>::mutate(|current_id|{
+				*current_id+=1;
+			});
 			// Emit an event.
 			Self::deposit_event(Event::StudentStored(name,age));
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn check_student(origin: OriginFor<T>, id: Id) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let student = Student::<T>::get(&id);
 
+			//Some(stu) == student(Some(value))
+			// if let Some(stu) = student{
+			// 	log::info!("Student:{:?}", stu);
+			// 	Self::deposit_event(Event::StudentHave);
+			// }
+			// else {
+			// 	Err(Error::<T>::NoStudent)?
+			// }
+			match student {
+				Some(stu) => log::info!("Student:{:?}",stu),
+				None => Err(Error::<T>::NoStudent)?
+			}
+			Ok(())
+		}
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn change_student(origin: OriginFor<T>, id: Id, name:Vec<u8>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let student = Student::<T>::get(&id);
+
+			Student::<T>::try_mutate(&id, |student| -> DispatchResult {
+
+				if let Some(stu) = student {
+					stu.name = name;
+					Ok(())
+				}
+				else {
+					Err(Error::<T>::NoStudent)?
+				}
+
+			})?;
+			Ok(())
+		}
 	}
 }
 
