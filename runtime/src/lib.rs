@@ -279,9 +279,15 @@ impl pallet_demo::Config for Runtime {
 	type Event = Event;
 }
 
+parameter_types! {
+	pub const MaxKitty:u32 = 10;
+}
 impl pallet_kitties::Config for Runtime {
 	type Event = Event;
-	type Currency =Balances ;
+	type Currency = Balances;
+	type KittyTime = Timestamp;
+	type Max = MaxKitty;
+	type KittyRandom = RandomnessCollectiveFlip;
 }
 
 impl pallet_tightly_coupling::Config for Runtime {
@@ -292,8 +298,6 @@ impl pallet_loosely_coupling::Config for Runtime {
 	type Event = Event;
 	type Increase =TemplateModule ;
 }
-
-
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

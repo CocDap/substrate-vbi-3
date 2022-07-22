@@ -44,7 +44,7 @@ pub mod pallet {
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T:Config> {
+	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, <T as frame_system::Config>::AccountId),
@@ -65,7 +65,7 @@ pub mod pallet {
 
 	//extrinsic
 	#[pallet::call]
-	impl<T:Config> Pallet<T> {
+	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
@@ -105,23 +105,19 @@ pub mod pallet {
 	}
 }
 
-impl<T:Config> Pallet<T>{
-
-	pub fn update_storage(value:u32) -> DispatchResult{
+impl<T: Config> Pallet<T> {
+	pub fn update_storage(value: u32) -> DispatchResult {
 		Something::<T>::put(value);
 		Ok(())
 	}
 }
 
-
-pub trait DoSome{
-	fn increase_value(value:u32) -> u32;
-
+pub trait DoSome {
+	fn increase_value(value: u32) -> u32;
 }
 
-
-impl<T:Config> DoSome for Pallet<T>{
-	fn increase_value(value:u32) -> u32{
-		value +5
+impl<T: Config> DoSome for Pallet<T> {
+	fn increase_value(value: u32) -> u32 {
+		value + 5
 	}
 }
