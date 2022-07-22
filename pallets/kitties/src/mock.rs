@@ -1,5 +1,5 @@
 use crate as pallet_kitties;
-use frame_support::traits::{ConstU16, ConstU64, ConstU32};
+use frame_support::traits::{ConstU16, ConstU64, ConstU32, ConstU128};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -44,7 +44,7 @@ impl system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u128>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -84,7 +84,7 @@ impl pallet_kitties::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type KittyTime = Timestamp;
-	type KittyRandom: Randomness<Self::Hash, Self::BlockNumber>;
+	type KittyRandom = RandomnessCollectiveFlip;
 	type Max = ConstU32<10>;
 }
 
