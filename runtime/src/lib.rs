@@ -31,12 +31,13 @@ pub use frame_support::{
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		IdentityFee, Weight,WeightToFeePolynomial,
+		IdentityFee, Weight,WeightToFeePolynomial,WeightToFeeCoefficient, WeightToFeeCoefficients
 	},
 	StorageValue,
 };
+use smallvec::smallvec;
 
-
+pub use frame_support::traits::Get;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -260,11 +261,41 @@ impl pallet_balances::Config for Runtime {
 }
 
 
+pub struct LinearWeightToFee<C>(sp_std::marker::PhantomData<C>);
+
+impl<C> WeightToFeePolynomial for LinearWeightToFee<C>
+where
+    C: Get<Balance>,
+{
+    type Balance = Balance;
+
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        let coefficient = WeightToFeeCoefficient {
+            coeff_integer: C::get(),
+            coeff_frac: Perbill::zero(),
+            negative: false,
+            degree: 1,
+        };
+
+        // Return a smallvec of coefficients. Order does not need to match degrees
+        // because each coefficient has an explicit degree annotation.
+        smallvec!(coefficient)
+    }
+}
+
+parameter_types! {
+
+    pub const FeeWeightRatio: u128 = 1_000;
+
+    // --snip--
+}
+
 
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
 	type OperationalFeeMultiplier = ConstU8<5>;
-	type WeightToFee = IdentityFee<Balance>;
+	//type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = LinearWeightToFee<FeeWeightRatio>;
 	type LengthToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate = ();
 }
