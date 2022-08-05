@@ -26,7 +26,7 @@ type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 use sp_runtime::traits::Hash;
-
+use sp_core::hash::H256;
 use frame_support::traits::Randomness;
 use frame_support::dispatch::fmt::Debug;
 
@@ -35,14 +35,23 @@ use sp_runtime::SaturatedConversion;
 pub mod pallet {
 
 	pub use super::*;
+	// #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	// #[scale_info(skip_type_params(T))]
+	// pub struct Kitty<T: Config> {
+	// 	pub dna: T::Hash,
+	// 	pub price: BalanceOf<T>,
+	// 	pub gender: Gender,
+	// 	pub owner: T::AccountId,
+	// 	pub created_date:u64 ,
+	// }
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Kitty<T: Config> {
-		pub dna: T::Hash,
+		pub dna: Vec<u8>,
 		pub price: BalanceOf<T>,
 		pub gender: Gender,
 		pub owner: T::AccountId,
-		pub created_date: <<T as Config>::KittyTime as Time>::Moment ,
+		pub created_date:u64 ,
 	}
 	#[derive(Clone, Encode, Decode, PartialEq, Copy, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub enum Gender {
@@ -72,30 +81,54 @@ pub mod pallet {
 	#[pallet::getter(fn kitty_id)]
 	pub type KittyId<T> = StorageValue<_, Id, ValueQuery>;
 
+	// #[pallet::storage]
+	// #[pallet::getter(fn get_kitty)]
+	// pub(super) type Kitties<T: Config> =
+	// 	StorageMap<_, Blake2_128Concat, T::Hash, Kitty<T>, OptionQuery>;
+
+	// #[pallet::storage]
+	// #[pallet::getter(fn kitty_owned)]
+	// pub(super) type KittiesOwned<T: Config> =
+	// 	StorageMap<_, Blake2_128Concat, T::AccountId, BoundedVec<T::Hash, T::Max>, ValueQuery>;
+
 	#[pallet::storage]
 	#[pallet::getter(fn get_kitty)]
 	pub(super) type Kitties<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::Hash, Kitty<T>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, Vec<u8>, Kitty<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn kitty_owned)]
 	pub(super) type KittiesOwned<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, BoundedVec<T::Hash, T::Max>, ValueQuery>;
-
+		StorageMap<_, Blake2_128Concat, T::AccountId, BoundedVec<Vec<u8>, T::Max>, ValueQuery>;
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
+	// #[pallet::event]
+	// #[pallet::generate_deposit(pub(super) fn deposit_event)]
+	// pub enum Event<T: Config> {
+	// 	/// A new kitty was successfully created.
+	// 	Created {
+	// 		kitty:T::Hash,
+	// 		owner: T::AccountId,
+	// 	},
+	// 	Transferred {
+	// 		from: T::AccountId,
+	// 		to: T::AccountId,
+	// 		kitty: T::Hash,
+	// 	},
+	// }
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new kitty was successfully created.
 		Created {
-			kitty:T::Hash,
+			kitty:Vec<u8>,
 			owner: T::AccountId,
 		},
 		Transferred {
 			from: T::AccountId,
 			to: T::AccountId,
-			kitty: T::Hash,
+			kitty: Vec<u8>,
 		},
 	}
 
@@ -111,6 +144,50 @@ pub mod pallet {
 		ExceedKittyNumber,
 	}
 
+	// #[pallet::genesis_config]
+	// pub struct GenesisConfig<T: Config>{
+	// 	pub genesis_kitties : Vec<T::Hash>,
+	// 	pub owner: Option<T::AccountId>,
+	// 	pub current_time : u64,
+	// }
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config>{
+		pub genesis_kitties : Vec<Vec<u8>>,
+		pub owner: Option<T::AccountId>,
+		pub current_time : u64,
+	}
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> GenesisConfig<T> {
+			GenesisConfig {
+				genesis_kitties : Vec::new(),
+				owner:  Default::default(),
+				current_time: 0,
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T:Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+
+			for item in self.genesis_kitties.iter() {
+				let kitty = Kitty::<T>{
+					// dna: item,
+					// dna: Pallet::<T>::gen_dna(),
+					dna: H256::random().as_bytes().to_vec(),
+					price : 100u32.into(),
+					owner : self.owner.clone().unwrap(),
+					gender: Gender::Female,
+					created_date:self.current_time ,
+				};
+				Kitties::<T>::insert(item, kitty);
+
+			}
+		}
+	}
+
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -118,6 +195,7 @@ pub mod pallet {
 	//extrinsic
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
 		#[pallet::weight(0)]
 		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
 			// Make sure the caller is from a signed origin
@@ -126,14 +204,15 @@ pub mod pallet {
 			let gender = Self::gen_gender(&dna)?;
 			// let now = pallet_timestamp::Pallet::<T>::now();
 			let now = T::KittyTime::now();
-			let dna = Self::gen_dna();
+			let convert = T::KittyTime::now().saturated_into::<u64>();
+			//let dna = Self::gen_dna();
 			let kitty =
-				Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: owner.clone(), created_date:now };
+				Kitty::<T> { dna: dna.clone(), price: 0u32.into(), gender, owner: owner.clone(), created_date:convert };
 
 			let max = T::Max::get();
 			let get_kitties = KittiesOwned::<T>::get(&owner);
 			ensure!((get_kitties.len() as u32) < max, Error::<T>::ExceedKittyNumber); 
-			let convert = T::KittyTime::now().saturated_into::<u64>();
+
 			//let convert_moment =<<T as Config>::KittyTime as Time>::Moment::saturated_from(convert);
 			let convert_moment: <<T as Config>::KittyTime as Time>::Moment = now.try_into().map_err(|_| Error::<T>::CannotConvert)?;
 			//let convert_moment = now.saturated_from(convert);
@@ -160,7 +239,8 @@ pub mod pallet {
 			Ok(())
 		}
 		#[pallet::weight(0)]
-		pub fn transfer(origin: OriginFor<T>, to: T::AccountId, dna: T::Hash) -> DispatchResult {
+		// pub fn transfer(origin: OriginFor<T>, to: T::AccountId, dna: T::Hash) -> DispatchResult {
+		pub fn transfer(origin: OriginFor<T>, to: T::AccountId, dna: Vec<u8>) -> DispatchResult {
 			// Make sure the caller is from a signed origin
 			let from = ensure_signed(origin)?;
 			let mut kitty = Kitties::<T>::get(&dna).ok_or(Error::<T>::NoKitty)?;
@@ -203,7 +283,8 @@ impl<T:Config> Pallet<T> {
 
 
 	fn gen_dna() -> T::Hash {
-		let (seed,_) = T::KittyRandom::random_seed();
+		let (seed,block) = T::KittyRandom::random_seed();
+		log::info!("block:{:?}", block);
 		let block_number = <frame_system::Pallet<T>>::block_number();
 		T::Hashing::hash_of(&(seed, block_number))
 	}
